@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-    import { useNavigate, useParams } from 'react-router-dom';
+    import { useNavigate, useParams, useLocation } from 'react-router-dom';
     import { supabase } from '../lib/supabase';
 
     export default function VariantForm() {
       const { id } = useParams();
       const navigate = useNavigate();
+      const location = useLocation();
       const [products, setProducts] = useState([]);
       const [formData, setFormData] = useState({
         product_id: '',
@@ -16,8 +17,16 @@ import React, { useState, useEffect } from 'react';
         fetchProducts();
         if (id) {
           fetchVariant();
+        } else {
+          // Check if product_id is passed in location state
+          if (location.state && location.state.product_id) {
+            setFormData(prevFormData => ({
+              ...prevFormData,
+              product_id: location.state.product_id
+            }));
+          }
         }
-      }, [id]);
+      }, [id, location.state]);
 
       async function fetchProducts() {
         const { data } = await supabase.from('products').select('*');
