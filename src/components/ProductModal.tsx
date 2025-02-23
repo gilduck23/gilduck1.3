@@ -3,9 +3,6 @@ import { X, Edit, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { DndContext, closestCenter, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
-import { SortableContext, useSortable, arrayMove, rectSortingStrategy } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 
 interface Variant {
   id: string;
@@ -30,48 +27,18 @@ interface ProductModalProps {
   onClose: () => void;
 }
 
-function SortableItem(props: { id: string; children: React.ReactNode }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-  } = useSortable({ id: props.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-    >
-      {props.children}
-    </div>
-  );
-}
-
 export default function ProductModal({ product, onClose }: ProductModalProps) {
-  const [selectedVariant, setSelectedVariant] = React.useState<Variant | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
   const [variants, setVariants] = useState<Variant[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const sensors = useSensors(
-    useSensor(PointerSensor)
-  );
-
   useEffect(() => {
     fetchVariants();
   }, [product.id]);
 
-  async function fetchVariants() {
+  const fetchVariants = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -90,45 +57,11 @@ export default function ProductModal({ product, onClose }: ProductModalProps) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [product.id]);
 
-  async function updateVariantOrder(newVariants: Variant[]) {
-    try {
-      const updates = newVariants.map((variant, index) =>
-        supabase
-          .from('variants')
-          .update({ order: index })
-          .eq('id', variant.id)
-      );
-
-      await Promise.all(updates);
-      console.log('Variant order updated successfully');
-      await fetchVariants();
-    } catch (error) {
-      console.error('Error updating variant order:', error);
-    }
-  }
-
-  const handleVariantClick = (variant: Variant) => {
-    setSelectedVariant((prevVariant) => {
-      return prevVariant?.id === variant.id ? null : variant;
-    });
-  };
-
-  const onDragEnd = useCallback(async (event) => {
-    const { active, over } = event;
-
-    if (!over || active.id === over.id) {
-      return;
-    }
-
-    const oldIndex = variants.findIndex((variant) => variant.id === active.id);
-    const newIndex = variants.findIndex((variant) => variant.id === over.id);
-
-    const newVariants = arrayMove(variants, oldIndex, newIndex);
-    setVariants(newVariants);
-    await updateVariantOrder(newVariants);
-  }, [variants, fetchVariants]);
+  const handleVariantClick = useCallback((variant: Variant) => {
+    setSelectedVariant(variant);
+  }, []);
 
   return (
     <div className="fixed inset-0 bg-black/50 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -180,58 +113,45 @@ export default function ProductModal({ product, onClose }: ProductModalProps) {
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
                       Available Variants
                     </h3>
-                    <DndContext
-                      sensors={sensors}
-                      collisionDetection={closestCenter}
-                      onDragEnd={onDragEnd}
-                    >
-                      <SortableContext
-                        items={variants.map(variant => variant.id)}
-                        strategy={rectSortingStrategy}
-                      >
-                        <div className="grid grid-cols-2 gap-2">
-                          {variants.map((variant) => (
-                            <SortableItem key={variant.id} id={variant.id}>
-                              <div className="relative">
-                                <button
-                                  onClick={() => handleVariantClick(variant)}
-                                  className={`w-full p-3 rounded-lg border-2 transition-all ${selectedVariant?.id === variant.id
-                                    ? 'border-indigo-500 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20'
-                                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                                    }`}
-                                >
-                                  <div className="text-left">
-                                    <p className="font-medium text-gray-900 dark:text-white">
-                                      {variant.name}
-                                    </p>
-                                  </div>
-                                </button>
-                                {user && (
-                                  <div className="absolute top-1 right-1 flex">
-                                    <Link
-                                      to={`/admin/variants/${variant.id}`}
-                                      className="text-primary-light dark:text-primary-dark hover:text-indigo-900"
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      <Edit className="h-4 w-4" />
-                                    </Link>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDeleteVariant(variant.id);
-                                      }}
-                                      className="text-red-600 hover:text-red-900"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            </SortableItem>
-                          ))}
+                    <div className="grid grid-cols-2 gap-2">
+                      {variants.map((variant) => (
+                        <div key={variant.id} className="relative">
+                          <button
+                            onClick={() => handleVariantClick(variant)}
+                            className={`w-full p-3 rounded-lg border-2 transition-all ${selectedVariant?.id === variant.id
+                              ? 'border-indigo-500 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20'
+                              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                              }`}
+                          >
+                            <div className="text-left">
+                              <p className="font-medium text-gray-900 dark:text-white">
+                                {variant.name}
+                              </p>
+                            </div>
+                          </button>
+                          {user && (
+                            <div className="absolute top-1 right-1 flex">
+                              <Link
+                                to={`/admin/variants/${variant.id}`}
+                                className="text-primary-light dark:text-primary-dark hover:text-indigo-900"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Link>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteVariant(variant.id);
+                                }}
+                                className="text-red-600 hover:text-red-900"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          )}
                         </div>
-                      </SortableContext>
-                    </DndContext>
+                      ))}
+                    </div>
                     {user && (
                       <Link
                         to="/admin/variants/new"
