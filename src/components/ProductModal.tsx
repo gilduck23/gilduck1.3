@@ -8,7 +8,6 @@ import React, { useState, useEffect, useCallback } from 'react';
       id: string;
       name: string;
       image_url?: string;
-      order: number;
     }
 
     interface Product {
@@ -33,6 +32,8 @@ import React, { useState, useEffect, useCallback } from 'react';
       const [loading, setLoading] = useState(true);
       const navigate = useNavigate();
       const { user } = useAuth();
+      const [isImageZoomed, setIsImageZoomed] = useState(false);
+      const [zoomedImageUrl, setZoomedImageUrl] = useState('');
 
       useEffect(() => {
         fetchVariants();
@@ -44,15 +45,16 @@ import React, { useState, useEffect, useCallback } from 'react';
           const { data, error } = await supabase
             .from('variants')
             .select('*')
-            .eq('product_id', product.id)
-            .order('order', { ascending: true });
+            .eq('product_id', product.id);
 
           if (error) {
             console.error('Error fetching variants:', error);
           }
 
           if (data) {
-            setVariants(data);
+            // Sort variants alphabetically by name
+            const sortedVariants = [...data].sort((a, b) => a.name.localeCompare(b.name));
+            setVariants(sortedVariants);
           }
         } finally {
           setLoading(false);
@@ -67,6 +69,39 @@ import React, { useState, useEffect, useCallback } from 'react';
         navigate('/admin/variants/new', { state: { product_id: product.id } });
       };
 
+      const handleImageClick = () => {
+        const imageUrl = selectedVariant?.image_url || product.image_url || '';
+        setZoomedImageUrl(imageUrl);
+        setIsImageZoomed(true);
+      };
+
+      const handleCloseZoom = () => {
+        setIsImageZoomed(false);
+        setZoomedImageUrl('');
+      };
+
+      const handleDeleteVariant = async (variantId: string) => {
+        if (!window.confirm('Are you sure you want to delete this variant?')) return;
+
+        try {
+          const { error } = await supabase
+            .from('variants')
+            .delete()
+            .eq('id', variantId);
+
+          if (error) {
+            console.error('Error deleting variant:', error);
+            alert('Failed to delete variant.');
+          } else {
+            // Refresh variants after deletion
+            fetchVariants();
+          }
+        } catch (error) {
+          console.error('Error deleting variant:', error);
+          alert('Failed to delete variant.');
+        }
+      };
+
       return (
         <div className="fixed inset-0 bg-black/50 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div
@@ -75,13 +110,15 @@ import React, { useState, useEffect, useCallback } from 'react';
           >
             <div className="flex h-full">
               {/* Image Section */}
-              <button onClick={onClose} className="w-1/2 relative">
-                <img
-                  src={selectedVariant?.image_url || product.image_url || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff'}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                />
-              </button>
+              <div className="w-1/2 relative">
+                <button onClick={handleImageClick} className="w-full h-full">
+                  <img
+                    src={selectedVariant?.image_url || product.image_url || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff'}
+                    alt={product.name}
+                    className="w-full h-full object-cover cursor-zoom-in"
+                  />
+                </button>
+              </div>
 
               {/* Content Section */}
               <div className="w-1/2 p-8 relative flex flex-col">
@@ -171,6 +208,24 @@ import React, { useState, useEffect, useCallback } from 'react';
               </div>
             </div>
           </div>
+
+          {/* Image Zoom Overlay */}
+          {isImageZoomed && (
+            <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={handleCloseZoom}>
+              <img
+                src={zoomedImageUrl}
+                alt="Zoomed Image"
+                className="max-w-full max-h-full object-contain cursor-zoom-out"
+                onClick={(e) => e.stopPropagation()}
+              />
+              <button
+                onClick={handleCloseZoom}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+              >
+                <X className="h-8 w-8" />
+              </button>
+            </div>
+          )}
         </div>
       );
     }
