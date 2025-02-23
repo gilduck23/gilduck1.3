@@ -19,7 +19,7 @@ import React from 'react';
                 }`}
             >
               <Package className="h-5 w-5" />
-              <span>Products</span>
+              <span className="text-text-light dark:text-text-dark">Products</span>
             </Link>
             <Link
               to="/admin/products/new"
@@ -27,7 +27,7 @@ import React from 'react';
                 }`}
             >
               <Package className="h-5 w-5" />
-              <span>Add Product</span>
+              <span className="text-text-light dark:text-text-dark">Add Product</span>
             </Link>
             <Link
               to="/admin/categories"
@@ -35,7 +35,7 @@ import React from 'react';
                 }`}
             >
               <List className="h-5 w-5" />
-              <span>Categories</span>
+              <span className="text-text-light dark:text-text-dark">Categories</span>
             </Link>
             <Link
               to="/admin/categories/new"
@@ -43,7 +43,7 @@ import React from 'react';
                 }`}
             >
               <FolderPlus className="h-5 w-5" />
-              <span>Add Category</span>
+              <span className="text-text-light dark:text-text-dark">Add Category</span>
             </Link>
             <Link
               to="/admin/variants/new"
@@ -51,7 +51,7 @@ import React from 'react';
                 }`}
             >
               <Layers className="h-5 w-5" />
-              <span>Add Variant</span>
+              <span className="text-text-light dark:text-text-dark">Add Variant</span>
             </Link>
           </nav>
         </div>

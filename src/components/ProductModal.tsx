@@ -29,6 +29,7 @@ import React, { useState, useEffect } from 'react';
     export default function ProductModal({ product, onClose }: ProductModalProps) {
       const [selectedVariant, setSelectedVariant] = React.useState<Variant | null>(null);
       const [variants, setVariants] = useState<Variant[]>([]);
+      const [loading, setLoading] = useState(true);
       const navigate = useNavigate();
       const { user } = useAuth();
 
@@ -37,13 +38,18 @@ import React, { useState, useEffect } from 'react';
       }, [product.id]);
 
       async function fetchVariants() {
-        const { data } = await supabase
-          .from('variants')
-          .select('*')
-          .eq('product_id', product.id);
+        setLoading(true);
+        try {
+          const { data } = await supabase
+            .from('variants')
+            .select('*')
+            .eq('product_id', product.id);
 
-        if (data) {
-          setVariants(data);
+          if (data) {
+            setVariants(data);
+          }
+        } finally {
+          setLoading(false);
         }
       }
 
@@ -93,59 +99,65 @@ import React, { useState, useEffect } from 'react';
                     </p>
                   </div>
 
-                  {variants && variants.length > 0 && (
-                    <div className="mb-6">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-                        Available Variants
-                      </h3>
-                      <div className="grid grid-cols-2 gap-2">
-                        {variants.map((variant) => (
-                          <div key={variant.id} className="relative">
-                            <button
-                              onClick={() => handleVariantClick(variant)}
-                              className={`w-full p-3 rounded-lg border-2 transition-all ${selectedVariant?.id === variant.id
-                                ? 'border-indigo-500 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20'
-                                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                                }`}
-                            >
-                              <div className="text-left">
-                                <p className="font-medium text-gray-900 dark:text-white">
-                                  {variant.name}
-                                </p>
-                              </div>
-                            </button>
-                            {user && (
-                              <div className="absolute top-1 right-1 flex">
-                                <Link
-                                  to={`/admin/variants/${variant.id}`}
-                                  className="text-primary-light dark:text-primary-dark hover:text-indigo-900"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Link>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteVariant(variant.id);
-                                  }}
-                                  className="text-red-600 hover:text-red-900"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                      {user && (
-                        <Link
-                          to="/admin/variants/new"
-                          className="block mt-4 text-sm text-primary-light dark:text-primary-dark hover:underline"
-                        >
-                          Add New Variant
-                        </Link>
-                      )}
+                  {loading ? (
+                    <div className="flex justify-center items-center">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-800 dark:border-white"></div>
                     </div>
+                  ) : (
+                    variants && variants.length > 0 && (
+                      <div className="mb-6">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                          Available Variants
+                        </h3>
+                        <div className="grid grid-cols-2 gap-2">
+                          {variants.map((variant) => (
+                            <div key={variant.id} className="relative">
+                              <button
+                                onClick={() => handleVariantClick(variant)}
+                                className={`w-full p-3 rounded-lg border-2 transition-all ${selectedVariant?.id === variant.id
+                                  ? 'border-indigo-500 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20'
+                                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                                  }`}
+                              >
+                                <div className="text-left">
+                                  <p className="font-medium text-gray-900 dark:text-white">
+                                    {variant.name}
+                                  </p>
+                                </div>
+                              </button>
+                              {user && (
+                                <div className="absolute top-1 right-1 flex">
+                                  <Link
+                                    to={`/admin/variants/${variant.id}`}
+                                    className="text-primary-light dark:text-primary-dark hover:text-indigo-900"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Link>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteVariant(variant.id);
+                                    }}
+                                    className="text-red-600 hover:text-red-900"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                        {user && (
+                          <Link
+                            to="/admin/variants/new"
+                            className="block mt-4 text-sm text-primary-light dark:text-primary-dark hover:underline"
+                          >
+                            Add New Variant
+                          </Link>
+                        )}
+                      </div>
+                    )
                   )}
                 </div>
               </div>
