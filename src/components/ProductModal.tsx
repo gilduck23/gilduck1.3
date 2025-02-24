@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+    import React, { useState, useEffect, useCallback } from 'react';
     import { X, Edit, Trash2 } from 'lucide-react';
     import { supabase } from '../lib/supabase';
     import { Link, useNavigate } from 'react-router-dom';
@@ -34,6 +34,8 @@ import React, { useState, useEffect, useCallback } from 'react';
       const { user } = useAuth();
       const [isImageZoomed, setIsImageZoomed] = useState(false);
       const [zoomedImageUrl, setZoomedImageUrl] = useState('');
+      const [visibleVariants, setVisibleVariants] = useState<Variant[]>([]);
+      const [hiddenVariantsCount, setHiddenVariantsCount] = useState(0);
 
       useEffect(() => {
         fetchVariants();
@@ -52,9 +54,23 @@ import React, { useState, useEffect, useCallback } from 'react';
           }
 
           if (data) {
+            // Remove duplicate variants
+            const uniqueVariants = data.reduce((acc: Variant[], current: Variant) => {
+              const x = acc.find(item => item.name === current.name && item.image_url === current.image_url);
+              if (!x) {
+                return acc.concat([current]);
+              } else {
+                return acc;
+              }
+            }, []);
+
             // Sort variants alphabetically by name
-            const sortedVariants = [...data].sort((a, b) => a.name.localeCompare(b.name));
+            const sortedVariants = [...uniqueVariants].sort((a, b) => a.name.localeCompare(b.name));
             setVariants(sortedVariants);
+
+            // Set initial visible variants and count of hidden variants
+            setVisibleVariants(sortedVariants.slice(0, 2));
+            setHiddenVariantsCount(Math.max(0, sortedVariants.length - 2));
           }
         } finally {
           setLoading(false);
@@ -100,6 +116,11 @@ import React, { useState, useEffect, useCallback } from 'react';
           console.error('Error deleting variant:', error);
           alert('Failed to delete variant.');
         }
+      };
+
+      const handleShowMoreVariants = () => {
+        setVisibleVariants(variants);
+        setHiddenVariantsCount(0);
       };
 
       return (
@@ -155,7 +176,7 @@ import React, { useState, useEffect, useCallback } from 'react';
                           Available Variants
                         </h3>
                         <div className="grid grid-cols-2 gap-2">
-                          {variants.map((variant) => (
+                          {visibleVariants.map((variant) => (
                             <div key={variant.id} className="relative">
                               <button
                                 onClick={() => handleVariantClick(variant)}
@@ -192,6 +213,16 @@ import React, { useState, useEffect, useCallback } from 'react';
                               )}
                             </div>
                           ))}
+                          {hiddenVariantsCount > 0 && (
+                            <div className="relative">
+                              <button
+                                onClick={handleShowMoreVariants}
+                                className="w-full p-3 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 text-left"
+                              >
+                                <p className="font-medium text-gray-900 dark:text-white">+{hiddenVariantsCount} more</p>
+                              </button>
+                            </div>
+                          )}
                         </div>
                         {user && (
                           <button
