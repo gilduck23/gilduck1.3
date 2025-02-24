@@ -7,6 +7,7 @@ import CategoryForm from './CategoryForm';
 import VariantForm from './VariantForm';
 import ProductList from './ProductList';
 import CategoryList from './CategoryList';
+import ProductImport from './ProductImport';
 
 export default function AdminPanel() {
   const { user } = useAuth();
@@ -22,6 +23,7 @@ export default function AdminPanel() {
         <Routes>
           <Route path="/" element={<ProductList isAdmin />} />
           <Route path="/products/new" element={<ProductForm />} />
+          <Route path="/products/import" element={<ProductImport />} />
           <Route path="/products/:id" element={<ProductForm />} />
           <Route path="/categories" element={<CategoryList />} />
           <Route path="/categories/new" element={<CategoryForm />} />
