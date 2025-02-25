@@ -19,12 +19,19 @@ interface VariantSelectProps {
 export default function VariantSelect({ variants, selectedVariant, onSelectVariant }: VariantSelectProps) {
   const [isOpen, setIsOpen] = useState(false)
 
+  if (!variants || variants.length === 0) {
+    return <p className="text-gray-500 dark:text-gray-400">No variants available</p>
+  }
+
   return (
     <div className="relative">
       <button
         type="button"
         className="relative w-full cursor-default rounded-lg bg-white dark:bg-gray-800 py-2 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75 focus-visible:ring-offset-2 focus-visible:ring-offset-indigo-300 sm:text-sm"
         onClick={() => setIsOpen(!isOpen)}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        aria-labelledby="variant-select-label"
       >
         <span className="block truncate">{selectedVariant ? selectedVariant.name : "Select a variant"}</span>
         <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
