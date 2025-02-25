@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { X } from "lucide-react"
+import { X, Loader } from "lucide-react"
 import { supabase } from "../lib/supabase"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
@@ -37,18 +37,22 @@ export default function ProductModal({ product, onClose }: ProductModalProps) {
   const { user } = useAuth()
   const [isImageZoomed, setIsImageZoomed] = useState(false)
   const [zoomedImageUrl, setZoomedImageUrl] = useState("")
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchVariants()
-  }, [fetchVariants])
+  }, [product.id, fetchVariants])
 
   const fetchVariants = useCallback(async () => {
     setLoading(true)
+    setError(null)
     try {
       const { data, error } = await supabase.from("variants").select("*").eq("product_id", product.id)
 
       if (error) {
         console.error("Error fetching variants:", error)
+        setError("Failed to load variants. Please try again.")
+        return
       }
 
       if (data) {
@@ -66,6 +70,9 @@ export default function ProductModal({ product, onClose }: ProductModalProps) {
         const sortedVariants = [...uniqueVariants].sort((a, b) => a.name.localeCompare(b.name))
         setVariants(sortedVariants)
       }
+    } catch (err) {
+      console.error("Unexpected error:", err)
+      setError("An unexpected error occurred. Please try again.")
     } finally {
       setLoading(false)
     }
@@ -109,6 +116,12 @@ export default function ProductModal({ product, onClose }: ProductModalProps) {
     }
   }
 
+  useEffect(() => {
+    if (variants.length > 0 && !selectedVariant) {
+      setSelectedVariant(variants[0])
+    }
+  }, [variants, selectedVariant])
+
   return (
     <div className="fixed inset-0 bg-black/50 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div
@@ -124,6 +137,7 @@ export default function ProductModal({ product, onClose }: ProductModalProps) {
                   selectedVariant?.image_url ||
                   product.image_url ||
                   "https://images.unsplash.com/photo-1542291026-7eec264c27ff" ||
+                  "/placeholder.svg" ||
                   "/placeholder.svg"
                 }
                 alt={product.name}
@@ -153,29 +167,30 @@ export default function ProductModal({ product, onClose }: ProductModalProps) {
               </div>
 
               {loading ? (
-                <div className="flex justify-center items-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-800 dark:border-white"></div>
+                <div className="flex justify-center items-center h-32">
+                  <Loader className="h-8 w-8 animate-spin text-primary-light dark:text-primary-dark" />
+                </div>
+              ) : error ? (
+                <div className="text-red-500 dark:text-red-400">{error}</div>
+              ) : variants && variants.length > 0 ? (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Available Variants</h3>
+                  <VariantSelect
+                    variants={variants}
+                    selectedVariant={selectedVariant}
+                    onSelectVariant={handleVariantClick}
+                  />
+                  {user && (
+                    <button
+                      onClick={handleAddVariantClick}
+                      className="block mt-4 text-sm text-primary-light dark:text-primary-dark hover:underline"
+                    >
+                      Add New Variant
+                    </button>
+                  )}
                 </div>
               ) : (
-                variants &&
-                variants.length > 0 && (
-                  <div className="mb-6">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Available Variants</h3>
-                    <VariantSelect
-                      variants={variants}
-                      selectedVariant={selectedVariant}
-                      onSelectVariant={handleVariantClick}
-                    />
-                    {user && (
-                      <button
-                        onClick={handleAddVariantClick}
-                        className="block mt-4 text-sm text-primary-light dark:text-primary-dark hover:underline"
-                      >
-                        Add New Variant
-                      </button>
-                    )}
-                  </div>
-                )
+                <div className="text-gray-500 dark:text-gray-400">No variants available for this product.</div>
               )}
             </div>
           </div>
@@ -198,6 +213,9 @@ export default function ProductModal({ product, onClose }: ProductModalProps) {
             <X className="h-8 w-8" />
           </button>
         </div>
+      )}
+      {variants.length === 0 && !loading && !error && (
+        <p className="text-gray-500 dark:text-gray-400">No variants available for this product.</p>
       )}
     </div>
   )
